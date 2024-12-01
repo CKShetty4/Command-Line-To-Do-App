@@ -1,7 +1,12 @@
 import System.IO (hFlush, stdout)
+import System.Directory (doesFileExist)
 
 type Task = String
 type TodoList = [Task]
+
+-- File to save tasks
+tasksFile :: FilePath
+tasksFile = "tasks.txt"
 
 -- Function to add a task
 addTask :: TodoList -> Task -> TodoList
@@ -18,11 +23,26 @@ viewTasks :: TodoList -> IO ()
 viewTasks [] = putStrLn "No tasks to show. Your todo list is empty!"
 viewTasks tasks = mapM_ putStrLn (zipWith (\i task -> show i ++ ". " ++ task) [0..] tasks)
 
+-- Function to load tasks from a file
+loadTasks :: FilePath -> IO TodoList
+loadTasks filePath = do
+    fileExists <- doesFileExist filePath
+    if fileExists
+        then do
+            contents <- readFile filePath
+            return (lines contents) -- Each line represents a task
+        else return []
+
+-- Function to save tasks to a file
+saveTasks :: FilePath -> TodoList -> IO ()
+saveTasks filePath tasks = writeFile filePath (unlines tasks)
+
 -- Main loop
 main :: IO ()
 main = do
-    let tasks = [] -- Start with an empty list
     putStrLn "Welcome to the Todo App!"
+    tasks <- loadTasks tasksFile -- Load tasks from file
+    putStrLn "Tasks loaded successfully!"
     appLoop tasks
 
 -- Recursive loop for the app
@@ -44,8 +64,10 @@ appLoop tasks = do
             putStr "Enter new task: "
             hFlush stdout
             newTask <- getLine
+            let updatedTasks = addTask tasks newTask
+            saveTasks tasksFile updatedTasks -- Save updated tasks to file
             putStrLn $ "Task added: " ++ newTask
-            appLoop (addTask tasks newTask)
+            appLoop updatedTasks
         "3" -> do
             if null tasks
                 then putStrLn "Your todo list is empty. Nothing to delete!"
@@ -58,9 +80,13 @@ appLoop tasks = do
                         then putStrLn "Invalid task number."
                         else do
                             putStrLn ("Deleted task: " ++ tasks !! num)
-                            appLoop (deleteTask tasks num)
-            appLoop tasks
-        "4" -> putStrLn "Goodbye!"
+                            let updatedTasks = deleteTask tasks num
+                            saveTasks tasksFile updatedTasks -- Save updated tasks to file
+                            appLoop updatedTasks
+            return () -- Return explicitly to avoid re-entering the loop
+        "4" -> do
+            putStrLn "Goodbye!"
+            return () -- Exit the appLoop explicitly
         _   -> do
             putStrLn "Invalid choice, try again."
             appLoop tasks
