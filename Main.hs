@@ -7,12 +7,15 @@ type TodoList = [Task]
 addTask :: TodoList -> Task -> TodoList
 addTask tasks newTask = tasks ++ [newTask]
 
--- Function to delete a task
+-- Function to delete a task with error handling
 deleteTask :: TodoList -> Int -> TodoList
-deleteTask tasks index = take index tasks ++ drop (index + 1) tasks
+deleteTask tasks index
+    | index < 0 || index >= length tasks = tasks -- Return unchanged list for invalid index
+    | otherwise = take index tasks ++ drop (index + 1) tasks
 
 -- Function to view tasks
 viewTasks :: TodoList -> IO ()
+viewTasks [] = putStrLn "No tasks to show. Your todo list is empty!"
 viewTasks tasks = mapM_ putStrLn (zipWith (\i task -> show i ++ ". " ++ task) [0..] tasks)
 
 -- Main loop
@@ -41,13 +44,22 @@ appLoop tasks = do
             putStr "Enter new task: "
             hFlush stdout
             newTask <- getLine
+            putStrLn $ "Task added: " ++ newTask
             appLoop (addTask tasks newTask)
         "3" -> do
-            putStr "Enter task number to delete: "
-            hFlush stdout
-            numStr <- getLine
-            let num = read numStr :: Int
-            appLoop (deleteTask tasks num)
+            if null tasks
+                then putStrLn "Your todo list is empty. Nothing to delete!"
+                else do
+                    putStr "Enter task number to delete: "
+                    hFlush stdout
+                    numStr <- getLine
+                    let num = read numStr :: Int
+                    if num < 0 || num >= length tasks
+                        then putStrLn "Invalid task number."
+                        else do
+                            putStrLn ("Deleted task: " ++ tasks !! num)
+                            appLoop (deleteTask tasks num)
+            appLoop tasks
         "4" -> putStrLn "Goodbye!"
         _   -> do
             putStrLn "Invalid choice, try again."
