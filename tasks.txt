@@ -1,2 +1,2 @@
-Example
-New
+("Write",False)
+("Play",True)
