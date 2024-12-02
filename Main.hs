@@ -94,36 +94,42 @@ appLoop tasks = do
             appLoop updatedTasks
         "3" -> do
             if null tasks
-                then putStrLn (setColor red "Your todo list is empty. Nothing to delete!")
+                then do
+                    putStrLn (setColor red "Your todo list is empty. Nothing to delete!")
+                    appLoop tasks
                 else do
                     putStr $ setColor yellow "Enter task number to delete: "
                     hFlush stdout
                     numStr <- getLine
                     let num = read numStr :: Int
                     if num < 0 || num >= length tasks
-                        then putStrLn (setColor red "Invalid task number.")
+                        then do
+                            putStrLn (setColor red "Invalid task number.")
+                            appLoop tasks
                         else do
                             putStrLn (setColor red ("Deleted task: " ++ fst (tasks !! num)))
                             let updatedTasks = deleteTask tasks num
                             saveTasks tasksFile updatedTasks -- Save updated tasks to file
                             appLoop updatedTasks
-            return () -- Return explicitly to avoid re-entering the loop
         "4" -> do
             if null tasks
-                then putStrLn (setColor red "Your todo list is empty. Nothing to mark as completed!")
+                then do
+                    putStrLn (setColor red "Your todo list is empty. Nothing to mark as completed!")
+                    appLoop tasks
                 else do
                     putStr $ setColor yellow "Enter task number to mark as completed: "
                     hFlush stdout
                     numStr <- getLine
                     let num = read numStr :: Int
                     if num < 0 || num >= length tasks
-                        then putStrLn (setColor red "Invalid task number.")
+                        then do
+                            putStrLn (setColor red "Invalid task number.")
+                            appLoop tasks
                         else do
                             let updatedTasks = markTaskCompleted tasks num
                             saveTasks tasksFile updatedTasks -- Save updated tasks to file
                             putStrLn $ setColor green ("Task marked as completed: " ++ fst (tasks !! num))
                             appLoop updatedTasks
-            return ()
         "5" -> do
             putStrLn (setColor yellow "Goodbye!")
             return () -- Exit the appLoop explicitly
