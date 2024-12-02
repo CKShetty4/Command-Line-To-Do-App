@@ -1,7 +1,7 @@
 import System.IO (hFlush, stdout)
 import System.Directory (doesFileExist)
 
-type Task = (String, Bool) -- Updated: Task with description and completion status
+type Task = (String, Bool) 
 type TodoList = [Task]
 
 -- File to save tasks
@@ -13,10 +13,10 @@ setColor :: String -> String -> String
 setColor color text = "\ESC[" ++ color ++ "m" ++ text ++ "\ESC[0m"
 
 red, green, yellow, blue, reset :: String
-red = "31"    -- Red
-green = "32"  -- Green
-yellow = "33" -- Yellow
-blue = "34"   -- Blue
+red = "31"
+green = "32" 
+yellow = "33"
+blue = "34"
 reset = "0"   -- Reset to default
 
 -- Function to add a task
@@ -132,7 +132,7 @@ appLoop tasks = do
                             appLoop updatedTasks
         "5" -> do
             putStrLn (setColor yellow "Goodbye!")
-            return () -- Exit the appLoop explicitly
+            return () 
         _   -> do
             putStrLn (setColor red "Invalid choice, try again.")
             appLoop tasks
