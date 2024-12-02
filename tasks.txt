@@ -1,2 +1,2 @@
-("Write",False)
+("Write",True)
 ("Play",True)

@@ -8,6 +8,17 @@ type TodoList = [Task]
 tasksFile :: FilePath
 tasksFile = "tasks.txt"
 
+-- ANSI escape codes for colors
+setColor :: String -> String -> String
+setColor color text = "\ESC[" ++ color ++ "m" ++ text ++ "\ESC[0m"
+
+red, green, yellow, blue, reset :: String
+red = "31"    -- Red
+green = "32"  -- Green
+yellow = "33" -- Yellow
+blue = "34"   -- Blue
+reset = "0"   -- Reset to default
+
 -- Function to add a task
 addTask :: TodoList -> String -> TodoList
 addTask tasks newTask = tasks ++ [(newTask, False)]
@@ -28,11 +39,12 @@ markTaskCompleted tasks index
 
 -- Function to view tasks
 viewTasks :: TodoList -> IO ()
-viewTasks [] = putStrLn "No tasks to show. Your todo list is empty!"
+viewTasks [] = putStrLn (setColor yellow "No tasks to show. Your todo list is empty!")
 viewTasks tasks = mapM_ putStrLn (zipWith formatTask [0..] tasks)
   where
     formatTask i (desc, completed) =
-        show i ++ ". " ++ (if completed then "[x] " else "[ ] ") ++ desc
+        setColor blue (show i ++ ". ") ++
+        (if completed then setColor green "[x] " else setColor red "[ ] ") ++ desc
 
 -- Function to load tasks from a file
 loadTasks :: FilePath -> IO TodoList
@@ -51,21 +63,21 @@ saveTasks filePath tasks = writeFile filePath (unlines (map show tasks))
 -- Main loop
 main :: IO ()
 main = do
-    putStrLn "Welcome to the Todo App!"
+    putStrLn $ setColor yellow "Welcome to the Todo App!"
     tasks <- loadTasks tasksFile -- Load tasks from file
-    putStrLn "Tasks loaded successfully!"
+    putStrLn $ setColor green "Tasks loaded successfully!"
     appLoop tasks
 
 -- Recursive loop for the app
 appLoop :: TodoList -> IO ()
 appLoop tasks = do
     putStrLn "\nChoose an option:"
-    putStrLn "1. View Tasks"
-    putStrLn "2. Add Task"
-    putStrLn "3. Delete Task"
-    putStrLn "4. Mark Task as Completed"
-    putStrLn "5. Exit"
-    putStr "Your choice: "
+    putStrLn $ setColor blue "1. View Tasks"
+    putStrLn $ setColor blue "2. Add Task"
+    putStrLn $ setColor blue "3. Delete Task"
+    putStrLn $ setColor blue "4. Mark Task as Completed"
+    putStrLn $ setColor blue "5. Exit"
+    putStr $ setColor yellow "Your choice: "
     hFlush stdout
     choice <- getLine
     case choice of
@@ -73,48 +85,48 @@ appLoop tasks = do
             viewTasks tasks
             appLoop tasks
         "2" -> do
-            putStr "Enter new task: "
+            putStr $ setColor yellow "Enter new task: "
             hFlush stdout
             newTask <- getLine
             let updatedTasks = addTask tasks newTask
             saveTasks tasksFile updatedTasks -- Save updated tasks to file
-            putStrLn $ "Task added: " ++ newTask
+            putStrLn $ setColor green ("Task added: " ++ newTask)
             appLoop updatedTasks
         "3" -> do
             if null tasks
-                then putStrLn "Your todo list is empty. Nothing to delete!"
+                then putStrLn (setColor red "Your todo list is empty. Nothing to delete!")
                 else do
-                    putStr "Enter task number to delete: "
+                    putStr $ setColor yellow "Enter task number to delete: "
                     hFlush stdout
                     numStr <- getLine
                     let num = read numStr :: Int
                     if num < 0 || num >= length tasks
-                        then putStrLn "Invalid task number."
+                        then putStrLn (setColor red "Invalid task number.")
                         else do
-                            putStrLn ("Deleted task: " ++ fst (tasks !! num))
+                            putStrLn (setColor red ("Deleted task: " ++ fst (tasks !! num)))
                             let updatedTasks = deleteTask tasks num
                             saveTasks tasksFile updatedTasks -- Save updated tasks to file
                             appLoop updatedTasks
             return () -- Return explicitly to avoid re-entering the loop
         "4" -> do
             if null tasks
-                then putStrLn "Your todo list is empty. Nothing to mark as completed!"
+                then putStrLn (setColor red "Your todo list is empty. Nothing to mark as completed!")
                 else do
-                    putStr "Enter task number to mark as completed: "
+                    putStr $ setColor yellow "Enter task number to mark as completed: "
                     hFlush stdout
                     numStr <- getLine
                     let num = read numStr :: Int
                     if num < 0 || num >= length tasks
-                        then putStrLn "Invalid task number."
+                        then putStrLn (setColor red "Invalid task number.")
                         else do
                             let updatedTasks = markTaskCompleted tasks num
                             saveTasks tasksFile updatedTasks -- Save updated tasks to file
-                            putStrLn $ "Task marked as completed: " ++ fst (tasks !! num)
+                            putStrLn $ setColor green ("Task marked as completed: " ++ fst (tasks !! num))
                             appLoop updatedTasks
             return ()
         "5" -> do
-            putStrLn "Goodbye!"
+            putStrLn (setColor yellow "Goodbye!")
             return () -- Exit the appLoop explicitly
         _   -> do
-            putStrLn "Invalid choice, try again."
+            putStrLn (setColor red "Invalid choice, try again.")
             appLoop tasks
