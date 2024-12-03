@@ -1,5 +1,8 @@
 import System.IO (hFlush, stdout)
 import System.Directory (doesFileExist)
+import Data.List (sortBy)  -- For sorting tasks
+import Data.Ord (comparing) -- For comparison function
+import Data.Char (toLower) -- For case-insensitive sorting
 
 type Task = (String, Bool) 
 type TodoList = [Task]
@@ -60,43 +63,55 @@ loadTasks filePath = do
 saveTasks :: FilePath -> TodoList -> IO ()
 saveTasks filePath tasks = writeFile filePath (unlines (map show tasks))
 
+-- Function to sort tasks alphabetically (ignoring case)
+sortTasksAlphabetically :: TodoList -> TodoList
+sortTasksAlphabetically = sortBy (comparing (map toLower . fst)) -- Convert both strings to lowercase for case-insensitive comparison
+
+-- Finds the original index of a task in the timeline list
+findOriginalIndex :: TodoList -> TodoList -> Int -> Int
+findOriginalIndex sortedTasks timelineTasks sortedIndex =
+    let (sortedDesc, _) = sortedTasks !! sortedIndex
+    in head [i | (i, (desc, _)) <- zip [0..] timelineTasks, desc == sortedDesc]
+
 -- Main loop
 main :: IO ()
 main = do
     putStrLn $ setColor yellow "Welcome to the Todo App!"
     tasks <- loadTasks tasksFile -- Load tasks from file
     putStrLn $ setColor green "Tasks loaded successfully!"
-    appLoop tasks
+    appLoop tasks tasks False
 
 -- Recursive loop for the app
-appLoop :: TodoList -> IO ()
-appLoop tasks = do
+appLoop :: TodoList -> TodoList -> Bool -> IO ()
+appLoop tasks timelineTasks isSorted = do
     putStrLn "\nChoose an option:"
     putStrLn $ setColor blue "1. View Tasks"
     putStrLn $ setColor blue "2. Add Task"
     putStrLn $ setColor blue "3. Delete Task"
     putStrLn $ setColor blue "4. Mark Task as Completed"
-    putStrLn $ setColor blue "5. Exit"
+    putStrLn $ setColor blue "5. Sort Tasks Alphabetically"
+    putStrLn $ setColor blue "6. Exit"
     putStr $ setColor yellow "Your choice: "
     hFlush stdout
     choice <- getLine
     case choice of
         "1" -> do
             viewTasks tasks
-            appLoop tasks
+            appLoop tasks timelineTasks isSorted
         "2" -> do
             putStr $ setColor yellow "Enter new task: "
             hFlush stdout
             newTask <- getLine
             let updatedTasks = addTask tasks newTask
-            saveTasks tasksFile updatedTasks -- Save updated tasks to file
+            let updatedTimelineTasks = addTask timelineTasks newTask
+            saveTasks tasksFile updatedTimelineTasks
             putStrLn $ setColor green ("Task added: " ++ newTask)
-            appLoop updatedTasks
+            appLoop updatedTasks updatedTimelineTasks isSorted
         "3" -> do
             if null tasks
                 then do
                     putStrLn (setColor red "Your todo list is empty. Nothing to delete!")
-                    appLoop tasks
+                    appLoop tasks timelineTasks isSorted
                 else do
                     putStr $ setColor yellow "Enter task number to delete: "
                     hFlush stdout
@@ -105,17 +120,18 @@ appLoop tasks = do
                     if num < 0 || num >= length tasks
                         then do
                             putStrLn (setColor red "Invalid task number.")
-                            appLoop tasks
+                            appLoop tasks timelineTasks isSorted
                         else do
-                            putStrLn (setColor red ("Deleted task: " ++ fst (tasks !! num)))
-                            let updatedTasks = deleteTask tasks num
-                            saveTasks tasksFile updatedTasks -- Save updated tasks to file
-                            appLoop updatedTasks
+                            let originalIndex = if isSorted then findOriginalIndex tasks timelineTasks num else num
+                            putStrLn (setColor red ("Deleted task: " ++ fst (timelineTasks !! originalIndex)))
+                            let updatedTimelineTasks = deleteTask timelineTasks originalIndex
+                            saveTasks tasksFile updatedTimelineTasks
+                            appLoop updatedTimelineTasks updatedTimelineTasks False
         "4" -> do
             if null tasks
                 then do
                     putStrLn (setColor red "Your todo list is empty. Nothing to mark as completed!")
-                    appLoop tasks
+                    appLoop tasks timelineTasks isSorted
                 else do
                     putStr $ setColor yellow "Enter task number to mark as completed: "
                     hFlush stdout
@@ -124,15 +140,21 @@ appLoop tasks = do
                     if num < 0 || num >= length tasks
                         then do
                             putStrLn (setColor red "Invalid task number.")
-                            appLoop tasks
+                            appLoop tasks timelineTasks isSorted
                         else do
-                            let updatedTasks = markTaskCompleted tasks num
-                            saveTasks tasksFile updatedTasks -- Save updated tasks to file
-                            putStrLn $ setColor green ("Task marked as completed: " ++ fst (tasks !! num))
-                            appLoop updatedTasks
+                            let originalIndex = if isSorted then findOriginalIndex tasks timelineTasks num else num
+                            let updatedTimelineTasks = markTaskCompleted timelineTasks originalIndex
+                            saveTasks tasksFile updatedTimelineTasks
+                            putStrLn $ setColor green ("Task marked as completed: " ++ fst (timelineTasks !! originalIndex))
+                            appLoop updatedTimelineTasks updatedTimelineTasks False
         "5" -> do
+            let sortedTasks = sortTasksAlphabetically tasks
+            putStrLn $ setColor green "Tasks sorted alphabetically!"
+            appLoop sortedTasks timelineTasks True
+        "6" -> do
+            saveTasks tasksFile timelineTasks
             putStrLn (setColor yellow "Goodbye!")
-            return () 
+            return ()
         _   -> do
             putStrLn (setColor red "Invalid choice, try again.")
-            appLoop tasks
+            appLoop tasks timelineTasks isSorted
